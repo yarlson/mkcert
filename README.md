@@ -195,3 +195,76 @@ Installing in the trust store does not require the CA key, so you can export the
 * run `mkcert -install`
 
 Remember that mkcert is meant for development purposes, not production, so it should not be used on end users' machines, and that you should *not* export or share `rootCA-key.pem`.
+
+### Using mkcert as a library
+
+mkcert can also be used as a Go library in your applications. Since the package is structured as a command (package main), you'll need to fork or copy the repository to use it as a library:
+
+1. Fork this repository or copy the code into your project
+2. Update the import paths in your project
+
+Example usage:
+
+```go
+package main
+
+import (
+	"log"
+	
+	"github.com/yarlson/mkcert" // Import the library
+)
+
+func main() {
+	// Create a new mkcert instance
+	mk, err := mkcert.New()
+	if err != nil {
+		log.Fatalf("Failed to create mkcert instance: %v", err)
+	}
+	
+	// Install the CA into system trust stores
+	if err := mk.Install(); err != nil {
+		log.Fatalf("Failed to install CA: %v", err)
+	}
+	
+	// Generate a certificate
+	hostnames := []string{"localhost", "127.0.0.1", "::1", "example.test"}
+	options := &mkcert.CertOptions{
+		ECDSA:    true,          // Use ECDSA instead of RSA
+		CertFile: "cert.pem",    // Custom output paths
+		KeyFile:  "key.pem",
+	}
+	
+	if err := mk.MakeCert(hostnames, options); err != nil {
+		log.Fatalf("Failed to generate certificate: %v", err)
+	}
+	
+	// Get CA certificate information
+	caCert := mk.CACert()
+	log.Printf("CA Subject: %s", caCert.Subject)
+	
+	// Get CA file paths
+	certPath, keyPath := mk.CAFiles()
+	log.Printf("CA files: %s, %s", certPath, keyPath)
+}
+```
+
+To use mkcert in your project, import it and then:
+
+1. Create a new instance with `mkcert.New()` or `mkcert.NewWithCARoot(customPath)`
+2. Install the CA certificate with `Install()` if needed
+3. Generate certificates using `MakeCert()`
+
+The API provides the same functionality as the command-line tool, but allows programmatic control and integration with your Go applications.
+
+#### Available methods
+
+- `New()` - Create a new mkcert instance with default CA location
+- `NewWithCARoot(caRoot string)` - Create a new instance with custom CA location
+- `Install()` - Install the CA certificate in system trust stores
+- `Uninstall()` - Remove the CA certificate from system trust stores
+- `MakeCert(hostnames []string, options *CertOptions)` - Generate a certificate
+- `MakeCertFromCSR(csrPath string, certFile string)` - Generate a certificate from a CSR
+- `CACert()` - Get the CA certificate
+- `CARoot()` - Get the CA root directory path
+- `CAFiles()` - Get the paths to the CA certificate and key files
+- `CreateCA()` - Explicitly create a new CA
